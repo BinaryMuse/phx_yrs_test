@@ -35,3 +35,4 @@ hello_phx-*.tar
 npm-debug.log
 /assets/node_modules/
 
+priv/native
