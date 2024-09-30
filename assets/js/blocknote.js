@@ -3,11 +3,23 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
 import { useCreateBlockNote } from "@blocknote/react";
 import React from "react";
+import * as Y from "yjs";
+import CustomProvider from "./custom_provider";
+
+const doc = new Y.Doc();
+const provider = new CustomProvider("/doc_updates", doc);
 
 export default function App() {
-  // Creates a new editor instance.
-  const editor = useCreateBlockNote();
+  const editor = useCreateBlockNote({
+    collaboration: {
+      provider,
+      fragment: doc.getXmlFragment("document-store"),
+      user: {
+        name: "My User",
+        color: "#ff0000",
+      },
+    },
+  });
 
-  // Renders the editor instance using a React component.
   return <BlockNoteView editor={editor} />;
 }
