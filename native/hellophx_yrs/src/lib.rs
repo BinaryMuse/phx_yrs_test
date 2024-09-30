@@ -1,5 +1,5 @@
-use rustler::{Binary, Env, OwnedBinary, Resource, ResourceArc};
-use yrs::{Doc, GetString, Text, Transact};
+use rustler::{Binary, Env, NewBinary, Resource, ResourceArc};
+use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update};
 
 struct YrsWrapper {
     doc: Doc,
@@ -7,7 +7,9 @@ struct YrsWrapper {
 
 impl YrsWrapper {
     fn new() -> Self {
-        YrsWrapper { doc: Doc::new() }
+        let doc = Doc::new();
+        doc.get_or_insert_xml_fragment("document-store");
+        YrsWrapper { doc }
     }
 }
 
@@ -20,29 +22,30 @@ fn create_doc() -> ResourceArc<YrsWrapper> {
 }
 
 #[rustler::nif]
-fn set_text(wrapper: ResourceArc<YrsWrapper>, bin: Binary) -> ResourceArc<YrsWrapper> {
+fn apply_update(wrapper: ResourceArc<YrsWrapper>, update: Binary) -> ResourceArc<YrsWrapper> {
     {
-        let text = wrapper.doc.get_or_insert_text("test");
         let mut txn = wrapper.doc.transact_mut();
-        let str = String::from_utf8(bin.to_vec()).expect("failed to convert bin to str");
-        text.insert(&mut txn, 0, &str);
+        txn.apply_update(Update::decode_v1(update.as_slice()).unwrap())
+            .expect("could not applly update to doc");
     }
 
     wrapper
 }
 
 #[rustler::nif]
-fn get_text(env: Env, wrapper: ResourceArc<YrsWrapper>) -> Binary {
-    let text = wrapper.doc.get_or_insert_text("test");
+fn get_update_for_load<'a>(
+    env: Env<'a>,
+    wrapper: ResourceArc<YrsWrapper>,
+    enc_state_vector: Binary,
+) -> Binary<'a> {
     let txn = wrapper.doc.transact_mut();
-    let str = text.get_string(&txn);
+    let state_vec_slice = enc_state_vector.as_slice();
+    let state_vec = StateVector::decode_v1(state_vec_slice).unwrap();
+    let update = txn.encode_diff_v1(&state_vec);
 
-    let mut owned: rustler::OwnedBinary = OwnedBinary::new(str.len()).expect("Allocation failed");
-    let slice = owned.as_mut_slice();
-
-    slice.clone_from_slice(str.as_bytes());
-
-    Binary::from_owned(owned, env)
+    let mut bin = NewBinary::new(env, update.len());
+    bin.as_mut_slice().clone_from_slice(update.as_slice());
+    Binary::try_from(bin).unwrap()
 }
 
 rustler::init!("Elixir.HelloPhx.YRS");

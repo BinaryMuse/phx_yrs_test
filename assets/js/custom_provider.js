@@ -11,6 +11,11 @@ export default class CustomProvider extends Observable {
 
     this.sock.onOpen(() => {
       this.chan.join();
+      this.chan
+        .push("get_update_for_load", Y.encodeStateVector(this.doc).buffer)
+        .receive("ok", (update) =>
+          Y.applyUpdate(this.doc, new Uint8Array(update)),
+        );
     });
 
     this.chan.on("apply_update", (payload, origin) => {

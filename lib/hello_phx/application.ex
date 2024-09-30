@@ -16,6 +16,7 @@ defmodule HelloPhx.Application do
       {Finch, name: HelloPhx.Finch},
       # Start a worker by calling: HelloPhx.Worker.start_link(arg)
       # {HelloPhx.Worker, arg},
+      {HelloPhx.Doc.Server, nil},
       # Start to serve requests, typically the last entry
       HelloPhxWeb.Endpoint
     ]
