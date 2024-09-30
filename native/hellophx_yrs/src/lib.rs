@@ -36,12 +36,11 @@ fn get_text(env: Env, wrapper: ResourceArc<YrsWrapper>) -> Binary {
     let text = wrapper.doc.get_or_insert_text("test");
     let txn = wrapper.doc.transact_mut();
     let str = text.get_string(&txn);
-    let str_sl = str.get(0..).unwrap().as_bytes();
 
     let mut owned: rustler::OwnedBinary = OwnedBinary::new(str.len()).expect("Allocation failed");
     let slice = owned.as_mut_slice();
 
-    slice.clone_from_slice(str_sl);
+    slice.clone_from_slice(str.as_bytes());
 
     Binary::from_owned(owned, env)
 }
